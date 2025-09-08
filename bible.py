@@ -1,5 +1,7 @@
 import streamlit as st
 import csv
+import requests
+import io
 from collections import defaultdict, OrderedDict
 
 # ----------------------
@@ -43,29 +45,38 @@ canonical_books = [
 ]
 
 # ----------------------
+# URL GitHub raw
+# ----------------------
+CSV_URL = "https://raw.githubusercontent.com/AlvinWinarta2111/Bible-App/main/data/tb.csv"
+CROSS_URL = "https://raw.githubusercontent.com/AlvinWinarta2111/Bible-App/main/assets/cross.png"
+SIDEBAR_URL = "https://raw.githubusercontent.com/AlvinWinarta2111/Bible-App/main/assets/sidebar.png"
+
+# ----------------------
 # Top Banner
 # ----------------------
-st.image("assets/cross.png", use_container_width=True)
+st.image(CROSS_URL, use_container_width=True)
 
 # ----------------------
-# Load CSV
+# Load CSV dari URL
 # ----------------------
 bible_data = defaultdict(lambda: defaultdict(dict))
-file_path = "data/tb.csv"
 
-with open(file_path, 'r', encoding='utf-8') as csvfile:
-    reader = csv.DictReader(csvfile)
-    reader.fieldnames = [h.strip().lower() for h in reader.fieldnames]
+response = requests.get(CSV_URL)
+response.raise_for_status()
+csvfile = io.StringIO(response.text)
 
-    for row in reader:
-        row = {k.strip().lower(): v.strip() for k, v in row.items()}
-        book_code = row.get('kitab', '')
-        book = book_map.get(book_code, book_code)
-        chapter = row.get('pasal', '')
-        verse = row.get('ayat', '')
-        text = row.get('firman', '')
-        if book and chapter and verse and text:
-            bible_data[book][chapter][verse] = text
+reader = csv.DictReader(csvfile)
+reader.fieldnames = [h.strip().lower() for h in reader.fieldnames]
+
+for row in reader:
+    row = {k.strip().lower(): v.strip() for k, v in row.items()}
+    book_code = row.get('kitab', '')
+    book = book_map.get(book_code, book_code)
+    chapter = row.get('pasal', '')
+    verse = row.get('ayat', '')
+    text = row.get('firman', '')
+    if book and chapter and verse and text:
+        bible_data[book][chapter][verse] = text
 
 # ----------------------
 # Sort kitab, pasal, ayat
@@ -83,7 +94,7 @@ for book in canonical_books:
 # ----------------------
 # Sidebar
 # ----------------------
-st.sidebar.image("assets/sidebar.png", width=250)
+st.sidebar.image(SIDEBAR_URL, width=250)
 st.sidebar.title("📖 Filter Alkitab")
 
 selected_book = st.sidebar.selectbox("Pilih Kitab", [""] + list(bible_data_ordered.keys()))
@@ -139,8 +150,7 @@ if selected_book and selected_chapter:
         else:
             st.write(f"{v_num}. {v_text}")
 
-    st.markdown("---"
-    )
+    st.markdown("---")
 
 else:
     st.write("👈 Silakan pilih kitab, pasal, dan rentang ayat dari sidebar untuk menampilkan ayat.")
